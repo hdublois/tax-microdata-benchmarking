@@ -6,7 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-USAGE = "USAGE: python bootstrap_sampling.py tc_dump_output_csv_file_name\n"
+USAGE = "USAGE: python bootstrap_sampling.py taxcalc_dump_output_csv_fname\n"
 
 SS_FRAC = 1.00  # 0.1
 SS_RNSEED = 902345678
@@ -31,8 +31,10 @@ def bootstrap_sampling(outfile):
     else:
         fdf = gdf
     print(f"SS_FRAC = {SS_FRAC:.2f}")
-    print(f"SS:wght(#M) = {fdf['s006'].sum() * 1e-6:.3f}")
-    print(f"SS:itax($B) = {(fdf['s006'] * fdf['iitax']).sum() * 1e-9:.3f}")
+    wght = fdf["s006"]
+    print(f"SS:wght(#M) = {wght.sum() * 1e-6:.3f}")
+    itax = fdf["iitax"]
+    print(f"SS:itax($B) = {(wght * itax).sum() * 1e-9:.3f}")
 
     # compute sum of wght and wght*itax for each bootstrap sample
     xdf = pd.DataFrame({"wght": fdf["s006"], "itax": fdf["iitax"]})

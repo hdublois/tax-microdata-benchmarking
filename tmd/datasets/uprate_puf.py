@@ -1,8 +1,7 @@
 import pandas as pd
 import numpy as np
-from tmd.imputation_assumptions import ITMDED_GROW_RATE
+from tmd.imputation_assumptions import SALT_GROW_RATE, ITMDED_GROW_RATE
 from tmd.storage import STORAGE_FOLDER
-
 
 USE_VARIABLE_SPECIFIC_POPULATION_GROWTH_DIVISORS = False
 
@@ -59,11 +58,9 @@ REMAINING_VARIABLES = [
     "P23250",
     "E24518",
     "E20400",
-    "E26270",
     "E03230",
     "E25850",
     "E25860",
-    "E00900",
     "E03270",
     "E03300",
     "P22250",
@@ -101,7 +98,7 @@ def get_soi_aggregate(variable, year, is_count):
     agi_lower = soi["AGI lower bound"] == -np.inf
     agi_upper = soi["AGI upper bound"] == np.inf
     count_status = soi["Count"] == is_count
-    non_taxable_only = soi["Taxable only"] == False
+    non_taxable_only = ~soi["Taxable only"]
 
     return (
         soi[
@@ -136,42 +133,45 @@ def get_growth(variable, from_year, to_year):
 
 
 def uprate_puf(puf, from_year, to_year):
-    print(f"Uprating PUF from {from_year} to {to_year}...")
+    print(f"Projecting PUF data from {from_year} to {to_year}...")
     puf = puf.copy()
-    for variable in SOI_TO_PUF_STRAIGHT_RENAMES:
+    for variable, puf_variable in SOI_TO_PUF_STRAIGHT_RENAMES.items():
         growth = get_growth(variable, from_year, to_year)
         if variable in [
-            "medical_expense_deductions_uncapped",
             "itemized_state_income_tax_deductions",
             "itemized_real_estate_tax_deductions",
+        ]:
+            nyears = to_year - from_year
+            growth = (1.0 + SALT_GROW_RATE) ** nyears
+        elif variable in [
+            "medical_expense_deductions_uncapped",
             "interest_paid_deductions",
             "charitable_contributions_deductions",
         ]:
-            # print("%% OLD_VAR_GROWTH:", variable, growth)
             nyears = to_year - from_year
             growth = (1.0 + ITMDED_GROW_RATE) ** nyears
-            # print("%% NEW_VAR_GROWTH:", variable, growth)
-        puf[SOI_TO_PUF_STRAIGHT_RENAMES[variable]] *= growth
+        puf[puf_variable] *= growth
 
-    # Positive and negative split variables
-    for variable in SOI_TO_PUF_POS_ONLY_RENAMES:
+    # positive and negative split variables
+    for variable, puf_variable in SOI_TO_PUF_POS_ONLY_RENAMES.items():
         growth = get_growth(variable, from_year, to_year)
-        puf_variable = SOI_TO_PUF_POS_ONLY_RENAMES[variable]
         puf.loc[puf[puf_variable] > 0, puf_variable] *= growth
 
-    for variable in SOI_TO_PUF_NEG_ONLY_RENAMES:
+    for variable, puf_variable in SOI_TO_PUF_NEG_ONLY_RENAMES.items():
         growth = get_growth(variable, from_year, to_year)
-        puf_variable = SOI_TO_PUF_NEG_ONLY_RENAMES[variable]
         puf.loc[puf[puf_variable] < 0, puf_variable] *= growth
 
-    # Remaining variables, uprate purely by AGI growth
+    # remaining variables, uprate purely by AGI growth
     # (for now, because I'm not sure how to handle the deductions,
     #  credits, and incomes separately)
     for variable in REMAINING_VARIABLES:
         growth = get_growth("adjusted_gross_income", from_year, to_year)
         puf[variable] *= growth
 
-    # Uprate the weights
+    # ensure total pensions >= taxable pensions after independent uprating
+    puf["E01500"] = np.maximum(puf["E01500"], puf["E01700"])
+
+    # uprate the weights
     returns_start = get_soi_aggregate("count", from_year, True)
     returns_end = get_soi_aggregate("count", to_year, True)
     puf.S006 *= returns_end / returns_start

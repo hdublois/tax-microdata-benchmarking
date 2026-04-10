@@ -1,17 +1,16 @@
 """
-Test 2023 and 2026 tax expenditures calculated using tmd files
+Test 2023 tax expenditures calculated using TMD files
 against expected tax expenditure values in the tests folder.
 """
 
-import difflib
 import pytest
 import numpy as np
-import pandas as pd
-from tmd.utils.taxcalc_utils import get_tax_expenditure_results
 from tmd.storage import STORAGE_FOLDER
+from tmd.imputation_assumptions import TAXYEAR
+from tmd.utils.tax_expenditures import get_tax_expenditure_results
 
 
-@pytest.mark.taxexpdiffs
+@pytest.mark.taxexp
 def test_tax_exp_diffs(
     tests_folder,
     tmd_variables,
@@ -20,51 +19,37 @@ def test_tax_exp_diffs(
 ):
     _ = get_tax_expenditure_results(
         tmd_variables,
-        2021,  # input variables data year
+        TAXYEAR,  # input variables data year
         2023,  # simulation year for tax expenditure estimates
         tmd_weights_path,
         tmd_growfactors_path,
     )
-    _ = get_tax_expenditure_results(
-        tmd_variables,
-        2021,  # input variables data year
-        2026,  # simulation year for tax expenditure estimates
-        tmd_weights_path,
-        tmd_growfactors_path,
-    )
     act_path = STORAGE_FOLDER / "output" / "tax_expenditures"
-    exp_path = tests_folder / "expected_tax_expenditures"
-    actdf = pd.read_csv(act_path, sep=" ", header=None)
-    expdf = pd.read_csv(exp_path, sep=" ", header=None)
-    assert actdf.shape == expdf.shape, "actdf and expdf are not the same shape"
-    # compare actdf and expdf rows
-    same = True
-    # ... compare 2026 itax revenue row using a larger relative diff tolerance
-    itax2026_index = int(len(expdf) / 2 + 1)
-    actval = actdf.iat[itax2026_index, 3]
-    expval = expdf.iat[itax2026_index, 3]
-    if not np.allclose(actval, expval, atol=0.0, rtol=0.09):
-        same = False
-    actdf.drop(index=itax2026_index, inplace=True)
-    expdf.drop(index=itax2026_index, inplace=True)
-    # ... compare all other rows using a smaller relative diff tolerance
-    actval = actdf.iloc[:, 3].to_numpy(dtype=np.float64)
-    expval = expdf.iloc[:, 3].to_numpy(dtype=np.float64)
-    reltol = 0.011
-    if not np.allclose(actval, expval, atol=0.0, rtol=reltol):
-        same = False
-    if same:
-        return
-    # if same is False
     with open(act_path, "r", encoding="utf-8") as actfile:
         act = actfile.readlines()
+    exp_path = tests_folder / f"expected_tax_exp_{TAXYEAR}_data"
     with open(exp_path, "r", encoding="utf-8") as expfile:
         exp = expfile.readlines()
-    diffs = list(
-        difflib.context_diff(act, exp, fromfile="actual", tofile="expect", n=0)
-    )
-    if len(diffs) > 0:
-        emsg = "\nThere are actual vs expect tax expenditure differences:\n"
-        for line in diffs:
-            emsg += line
-        raise ValueError(emsg)
+    assert len(act) == len(exp), "number of act and exp rows differ"
+    a_tol = 0.1  # handles :.1f rounding of tax expenditures
+    r_tol = 1e-5  # np.allclose default value is 1e-5
+    diffs = []
+    for rowidx, act_row in enumerate(act):
+        atok = act_row.split()
+        etok = exp[rowidx].split()
+        for tokidx in range(3):
+            assert atok[tokidx] == etok[tokidx], "act vs exp tokens differ"
+        act_val = float(atok[3])
+        exp_val = float(etok[3])
+        if not np.allclose([act_val], [exp_val], atol=a_tol, rtol=r_tol):
+            msg = (
+                f"{atok[2]},act,exp,atol,rtol= "
+                f"{act_val} {exp_val} {a_tol} {r_tol}"
+            )
+            diffs.append(msg)
+    if diffs:
+        msg = (
+            "\nACT-vs-EXP TAX EXPENDITURE DIFFERENCES "
+            f"USING {TAXYEAR} DATA:\n"
+        )
+        raise ValueError(msg + "\n".join(diffs))

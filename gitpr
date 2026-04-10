@@ -12,8 +12,8 @@ if [[ "$#" -ne 1 ]]; then
     exit 1
 fi
 NUM=$1
-# create local branch containing upstream pull request with NUM
-git fetch upstream pull/$NUM/head:pr-$NUM
+# create local branch containing origin pull request with NUM
+git fetch origin pull/$NUM/head:pr-$NUM
 git checkout pr-$NUM
 git status
 exit 0

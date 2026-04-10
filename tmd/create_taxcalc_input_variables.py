@@ -1,21 +1,20 @@
 """
-Construct tmd.csv, a Tax-Calculator-style input variable file for 2021.
+Construct tmd.csv, a Tax-Calculator-style input variable file for TAXYEAR.
 """
 
-import taxcalc as tc
-from tmd.datasets.tmd import create_tmd_2021
+import taxcalc
+from tmd.datasets.tmd import create_tmd_dataframe
 from tmd.imputation_assumptions import (
+    TAXYEAR,
     IMPUTATION_RF_RNG_SEED,
     IMPUTATION_BETA_RNG_SEED,
+    SALT_GROW_RATE,
     ITMDED_GROW_RATE,
-    W2_WAGES_SCALE,
+    W2_WAGES_RATIO,
     CPS_WEIGHTS_SCALE,
-    REWEIGHT_DEVIATION_PENALTY,
 )
 from tmd.storage import STORAGE_FOLDER
 
-
-TAXYEAR = 2021
 DUMP_ALL_UNROUNDED_VARIABLES = False
 
 
@@ -23,25 +22,26 @@ def create_variable_file(write_file=True):
     """
     Create Tax-Calculator-style input variable file for TAXYEAR.
     """
+    assert TAXYEAR == 2022, "Assumptions for obsolete 2021 data not calibrated"
     # construct dataframe containing input and output variables
     print(f"Creating {TAXYEAR} PUF+CPS file assuming:")
     print(f"  IMPUTATION_RF_RNG_SEED = {IMPUTATION_RF_RNG_SEED}")
     print(f"  IMPUTATION_BETA_RNG_SEED = {IMPUTATION_BETA_RNG_SEED}")
+    print(f"  ASSUMED SALT_GROW_RATE = {SALT_GROW_RATE:.3f}")
     print(f"  ASSUMED ITMDED_GROW_RATE = {ITMDED_GROW_RATE:.3f}")
-    print(f"  ASSUMED W2_WAGES_SCALE = {W2_WAGES_SCALE:.5f}")
-    print(f"  WEIGHT_DEVIATION_PENALTY = {REWEIGHT_DEVIATION_PENALTY:.3f}")
-    print(f"  ASSUMED CPS_WEIGHTS_SCALE = {CPS_WEIGHTS_SCALE:.5f}")
-    vdf = create_tmd_2021()
+    print(f"  ASSUMED W2_WAGES_RATIO = {W2_WAGES_RATIO[TAXYEAR]:.5f}")
+    print(f"  ASSUMED CPS_WEIGHTS_SCALE = {CPS_WEIGHTS_SCALE[TAXYEAR]:.2f}")
+    vdf = create_tmd_dataframe(TAXYEAR)
     vdf.FLPDYR = TAXYEAR
     vdf.agi_bin = 0
     # optionally dump all input and output variables unrounded
     if write_file and DUMP_ALL_UNROUNDED_VARIABLES:
         fname = STORAGE_FOLDER / "allvars_unrounded_2021.csv"
-        print(f"Writing PUF+CPS file... [{fname}]")
+        print(f"Writing unrounded PUF+CPS file... [{fname}]")
         vdf.to_csv(fname, index=False)
     # streamline dataframe so that it includes only input variables
-    print("Removing output variables from PUF+CPS DataFrame...")
-    rec = tc.Records(
+    print("Removing output variables from PUF+CPS dataframe...")
+    rec = taxcalc.Records(
         data=vdf,
         start_year=TAXYEAR,
         gfactors=None,

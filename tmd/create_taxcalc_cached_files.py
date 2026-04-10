@@ -1,12 +1,12 @@
 """
-Generate tmd/storage/output/cached_*.npy files for TAX_YEAR.
+Generate tmd/storage/output/cached_*.npy files for TAXYEAR.
 """
 
 import numpy as np
-import taxcalc as tc
+import pandas as pd
+import taxcalc
 from tmd.storage import STORAGE_FOLDER, CACHED_TAXCALC_VARIABLES
-
-TAX_YEAR = 2021
+from tmd.imputation_assumptions import TAXYEAR, CREDIT_CLAIMING
 
 INFILE_PATH = STORAGE_FOLDER / "output" / "tmd.csv.gz"
 WTFILE_PATH = STORAGE_FOLDER / "output" / "tmd_weights.csv.gz"
@@ -18,16 +18,22 @@ def create_cached_files():
     Create a Numpy binary file containing FIRST_YEAR values
     for each variable in the CACHED_TAXCALC_VARIABLES list.
     """
-    # calculate all Tax-Calculator variables for TAX_YEAR
-    pol = tc.Policy.tmd_constructor(growfactors=GFFILE_PATH)
-    rec = tc.Records.tmd_constructor(
-        data_path=INFILE_PATH,
-        weights_path=WTFILE_PATH,
-        growfactors=GFFILE_PATH,
+    # calculate all Tax-Calculator variables for TAXYEAR
+    # Construct Records directly (bypassing tmd_constructor which
+    # hardcodes start_year=2021 in the taxcalc library).
+    pol = taxcalc.Policy()
+    pol.implement_reform(CREDIT_CLAIMING)
+    rec = taxcalc.Records(
+        data=pd.read_csv(INFILE_PATH),
+        start_year=TAXYEAR,
+        gfactors=taxcalc.GrowFactors(growfactors_filename=str(GFFILE_PATH)),
+        weights=pd.read_csv(WTFILE_PATH),
+        adjust_ratios=None,
         exact_calculations=True,
+        weights_scale=1.0,
     )
-    calc = tc.Calculator(policy=pol, records=rec)
-    calc.advance_to_year(TAX_YEAR)
+    calc = taxcalc.Calculator(policy=pol, records=rec)
+    calc.advance_to_year(TAXYEAR)
     calc.calc_all()
 
     # cache all variables to aid in areas examination

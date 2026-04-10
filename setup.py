@@ -2,21 +2,19 @@ from setuptools import setup, find_packages
 
 setup(
     name="tmd",
-    version="1.0.0",
+    version="2.0.0",
     packages=find_packages(),
-    python_requires=">=3.10,<3.13",
+    python_requires=">=3.11,<3.14",
     install_requires=[
-        "policyengine_us==1.55.0",
-        "tables",  # required by policyengine_us
-        "taxcalc>=4.5.0",
+        "taxcalc>=6.5.0",
+        "clarabel",
         "scikit-learn",
-        "torch",
-        "tensorboard",
         "scipy",
-        "jax",
-        "black>=24.4.2",
+        "xlrd",
+        "black>=26.1.0",
+        "pycodestyle>=2.14.0",
+        "pylint>=3.3.8",
         "pytest",
         "pytest-xdist",
-        "jupyter-book",
     ],
 )

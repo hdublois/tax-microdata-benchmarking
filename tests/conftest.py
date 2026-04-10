@@ -1,11 +1,46 @@
+"""
+Configure pytest unit tests.
+"""
+
 from pathlib import Path
 import pytest
 import numpy as np
 import pandas as pd
+import taxcalc
 from tmd.storage import STORAGE_FOLDER
+from tmd.imputation_assumptions import TAXYEAR
 
 # convert all numpy floating-point execeptions into errors
 np.seterr(all="raise")
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--update-fingerprint",
+        action="store_true",
+        default=False,
+        help="Save current results as reference fingerprint",
+    )
+
+
+def create_tmd_records(
+    data_path, weights_path, growfactors_path, exact_calculations=True
+):
+    """
+    Create taxcalc.Records with start_year=TAXYEAR.
+    Bypasses tmd_constructor() which hardcodes start_year=2021.
+    """
+    return taxcalc.Records(
+        data=pd.read_csv(data_path),
+        start_year=TAXYEAR,
+        gfactors=taxcalc.GrowFactors(
+            growfactors_filename=str(growfactors_path)
+        ),
+        weights=pd.read_csv(weights_path),
+        adjust_ratios=None,
+        exact_calculations=exact_calculations,
+        weights_scale=1.0,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -16,6 +51,11 @@ def tests_folder():
 @pytest.fixture(scope="session")
 def tmd_variables():
     return pd.read_csv(STORAGE_FOLDER / "output" / "tmd.csv.gz")
+
+
+@pytest.fixture(scope="session")
+def tmd_variables_path():
+    return STORAGE_FOLDER / "output" / "tmd.csv.gz"
 
 
 @pytest.fixture(scope="session")

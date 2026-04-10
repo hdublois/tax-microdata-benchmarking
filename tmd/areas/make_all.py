@@ -9,18 +9,18 @@ import sys
 import time
 from multiprocessing import Pool
 from tmd.areas.create_area_weights import (
-    valid_area,
     create_area_weights_file,
 )
 from tmd.areas import AREAS_FOLDER
 from tmd.storage import STORAGE_FOLDER
+from tmd.imputation_assumptions import POPULATION_FILE
 
 OTHER_DEPENDENCIES = [
     AREAS_FOLDER / "create_area_weights.py",
     STORAGE_FOLDER / "output" / "tmd.csv.gz",
     STORAGE_FOLDER / "output" / "tmd_weights.csv.gz",
     STORAGE_FOLDER / "output" / "tmd_growfactors.csv",
-    STORAGE_FOLDER / "input" / "cbo_population_forecast.yaml",
+    STORAGE_FOLDER / "input" / POPULATION_FILE,
     # Tax-Calculator is a dependency, so do "make tmd_files" when upgrading T-C
 ]
 
@@ -57,9 +57,8 @@ def to_do_areas():
     tpaths = sorted(list(tfolder.glob("*_targets.csv")))
     for tpath in tpaths:
         area = tpath.name.split("_")[0]
-        if not valid_area(area):
-            print(f"Skipping invalid area name {area}")
-            continue  # skip this area
+        if area.startswith("."):
+            continue  # skip hidden files
         wpath = AREAS_FOLDER / "weights" / f"{area}_tmd_weights.csv.gz"
         if wpath.exists():
             wtime = wpath.stat().st_mtime
