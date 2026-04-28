@@ -23,12 +23,26 @@ Elastic slack variables handle infeasibility gracefully:
     subject to  lb_j <= (Bx)_j + s_lo - s_hi <= ub_j,  s >= 0
 
 Follows the same QP construction as tmd/utils/reweight.py.
+
+This module is a library, not a CLI.  It is called by
+``tmd.areas.solve_weights`` (parallel batch solver, the production
+entry point), ``tmd.areas.developer_tools`` (relaxation cascade),
+and ``tmd.areas.make_all`` (CI driver).  Key public entry points:
+
+    create_area_weights_file(area, ...)   — solve one area, write
+                                             ``<area>_tmd_weights.csv.gz``
+                                             and ``<area>.log``.
+    cd_target_dir(congress)               — directory of CD target
+                                             files for the given session.
+    cd_weight_dir(congress)               — directory of CD weight
+                                             files for the given session.
 """
 
 import sys
 import time
 
 import re
+from pathlib import Path
 
 import clarabel
 import numpy as np
@@ -77,8 +91,31 @@ CD_MULTIPLIER_MAX = 50.0
 # Default target/weight directories
 STATE_TARGET_DIR = AREAS_FOLDER / "targets" / "states"
 STATE_WEIGHT_DIR = AREAS_FOLDER / "weights" / "states"
-CD_TARGET_DIR = AREAS_FOLDER / "targets" / "cds"
-CD_WEIGHT_DIR = AREAS_FOLDER / "weights" / "cds"
+
+
+def cd_target_dir(congress: int) -> "Path":
+    """Return the target-directory path for the given Congress session."""
+    if congress not in (118, 119):
+        raise ValueError(
+            f"Unsupported Congress session: {congress}. Supported: (118, 119)"
+        )
+    return AREAS_FOLDER / "targets" / f"cds_{congress}"
+
+
+def cd_weight_dir(congress: int) -> "Path":
+    """Return the weight-directory path for the given Congress session."""
+    if congress not in (118, 119):
+        raise ValueError(
+            f"Unsupported Congress session: {congress}. Supported: (118, 119)"
+        )
+    return AREAS_FOLDER / "weights" / f"cds_{congress}"
+
+
+# Back-compat aliases (118 only).  New code should call
+# ``cd_target_dir(congress)`` / ``cd_weight_dir(congress)`` with an
+# explicit Congress session.
+CD_TARGET_DIR = cd_target_dir(118)
+CD_WEIGHT_DIR = cd_weight_dir(118)
 
 
 def _load_taxcalc_data():
@@ -88,15 +125,23 @@ def _load_taxcalc_data():
     per-worker memory (~150 MB savings with 109 → ~25 columns).
     """
     vdf = pd.read_csv(INFILE_PATH)
-    vdf["c00100"] = np.load(TAXCALC_AGI_CACHE)
+    new_cols = {"c00100": np.load(TAXCALC_AGI_CACHE)}
     if CACHED_ALLVARS_PATH.exists():
         allvars = pd.read_csv(CACHED_ALLVARS_PATH, usecols=CACHED_TC_OUTPUTS)
         for col in CACHED_TC_OUTPUTS:
             if col in allvars.columns:
-                vdf[col] = allvars[col].values
+                new_cols[col] = allvars[col].values
+    vdf = pd.concat([vdf, pd.DataFrame(new_cols, index=vdf.index)], axis=1)
     # Synthetic combined variable for net capital gains targeting
     if "p22250" in vdf.columns and "p23250" in vdf.columns:
-        vdf["capgains_net"] = vdf["p22250"] + vdf["p23250"]
+        capgains_net = vdf["p22250"].values + vdf["p23250"].values
+        vdf = pd.concat(
+            [
+                vdf,
+                pd.DataFrame({"capgains_net": capgains_net}, index=vdf.index),
+            ],
+            axis=1,
+        )
     assert np.all(vdf.s006 > 0), "Not all weights are positive"
     # Drop columns not used by the solver to reduce memory.
     # Keep infrastructure columns + any column that could be a target

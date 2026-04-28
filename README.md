@@ -4,7 +4,11 @@ This repository contains all working files for a project to develop
 validated input files for use in
 [Tax-Calculator](https://github.com/PSLmodels/Tax-Calculator).
 
-The **current version is 2.0.0**, which was released on March 29, 2026,
+For Tax-Calculator results generated when using these TMD input files,
+see [this
+folder](https://github.com/PSLmodels/Tax-Calculator/tree/master/taxcalc/cli/input_data_tests).
+
+The **current TMD version is 2.0.0**, which was released on March 29, 2026,
 and includes the following significant improvements:
 
 - generate national, state, and Congressional district, input files
@@ -33,8 +37,7 @@ To generate the TMD files from the PUF files, do this:
 1. Copy the two 2015 PUF files to the `tmd/storage/input` folder
 2. Install the SIPP files described in `tmd/storage/input/SIPP24/README.md`
 3. Install the CEX files described in `tmd/storage/input/CEX23/README.md`
-4. Run `make clean` in the repository's top-level folder
-5. Run `make data` in the repository's top-level folder
+4. Run `make data` in the repository's top-level folder
 
 The `make data` command creates and tests the three national
 `tmd*csv*` data files, which are located in the `tmd/storage/output`
@@ -43,3 +46,15 @@ documentation](https://taxcalc.pslmodels.org/usage/data.html#irs-public-use-data
 on how to use these three files with Tax-Calculator.  Also, you can
 look at the tests in this repository to see Python code that uses the
 TMD files with Tax-Calculator.
+
+## Sub-national area weights
+
+The repository also produces **per-area weight files** that adapt the national
+TMD microdata to a specific state or Congressional district.  The records do not
+change; only the weights do, so that weighted sums and targeted distributional
+values match state-level (or CD-level) totals from IRS Statistics of Income
+(SOI) and other published sources.
+
+See [`tmd/areas/README.md`](tmd/areas/README.md) for how to build
+the weights, what files you get, and how to use them — with or
+without Tax-Calculator.
