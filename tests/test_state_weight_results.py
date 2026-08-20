@@ -10,6 +10,10 @@ Run after:
     python -m tmd.areas.solve_weights --scope states --workers 8
 """
 
+# pylint: disable=too-few-public-methods
+# Test classes group related tests; some hold a single test method.
+# pylint: disable=redefined-outer-name  # pytest fixture pattern
+
 import io
 from pathlib import Path
 
