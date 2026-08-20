@@ -105,17 +105,18 @@ class TestStateWeightFiles:
         ), f"{state}: solver did not report Solved"
 
 
+@pytest.fixture(scope="module")
+def vdf():
+    """Load TMD data once for all accuracy tests."""
+    return _load_taxcalc_data()
+
+
 @pytest.mark.skipif(
     not _HAS_CACHED,
     reason="Cached TMD data files not available",
 )
 class TestStateTargetAccuracy:
     """Verify weighted sums hit targets within tolerance."""
-
-    @pytest.fixture(scope="class")
-    def vdf(self):
-        """Load TMD data once for all accuracy tests."""
-        return _load_taxcalc_data()
 
     @pytest.mark.parametrize(
         "state",
