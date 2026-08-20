@@ -4,7 +4,7 @@ setup(
     name="tmd",
     version="2.1.4",
     packages=find_packages(),
-    python_requires=">=3.11,<3.14",
+    python_requires=">=3.12,<3.15",
     install_requires=[
         "taxcalc>=6.8.0",
         "numpy",

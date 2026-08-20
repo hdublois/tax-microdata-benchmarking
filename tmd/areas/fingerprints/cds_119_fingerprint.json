@@ -3054,10 +3054,10 @@
     }
   },
   "metadata": {
-    "generated": "2026-08-13",
+    "generated": "2026-08-20",
     "n_areas": 436,
     "scope": "cds_119",
-    "taxcalc_version": "6.8.0",
+    "taxcalc_version": "6.8.0b",
     "taxyear": 2022
   }
 }
