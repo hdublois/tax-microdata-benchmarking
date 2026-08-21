@@ -11,7 +11,7 @@ folder](https://github.com/PSLmodels/Tax-Calculator/tree/master/taxcalc/cli/inpu
 The **current TMD version is 2.1.4**, which was released on July 13,
 2026, and is the same as TMD version 2.1.3 except that a new version
 of `scikit-learn` (1.9.0), which fixed a bug in its weighted imputation
-algorithm, is used (see #534 for details).  Tax-Calculator version 6.8.0
+algorithm, is used (see #534 for details).  Tax-Calculator version 6.8.1
 or higher is required to generate the TMD files.
 
 When using version 2.1.4 to generate **sub-national weights**, there
