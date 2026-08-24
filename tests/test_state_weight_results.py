@@ -10,6 +10,10 @@ Run after:
     python -m tmd.areas.solve_weights --scope states --workers 8
 """
 
+# pylint: disable=too-few-public-methods
+# Test classes group related tests; some hold a single test method.
+# pylint: disable=redefined-outer-name  # pytest fixture pattern
+
 import io
 from pathlib import Path
 
@@ -105,17 +109,18 @@ class TestStateWeightFiles:
         ), f"{state}: solver did not report Solved"
 
 
+@pytest.fixture(scope="module")
+def vdf():
+    """Load TMD data once for all accuracy tests."""
+    return _load_taxcalc_data()
+
+
 @pytest.mark.skipif(
     not _HAS_CACHED,
     reason="Cached TMD data files not available",
 )
 class TestStateTargetAccuracy:
     """Verify weighted sums hit targets within tolerance."""
-
-    @pytest.fixture(scope="class")
-    def vdf(self):
-        """Load TMD data once for all accuracy tests."""
-        return _load_taxcalc_data()
 
     @pytest.mark.parametrize(
         "state",

@@ -11,13 +11,13 @@ folder](https://github.com/PSLmodels/Tax-Calculator/tree/master/taxcalc/cli/inpu
 The **current TMD version is 2.1.4**, which was released on July 13,
 2026, and is the same as TMD version 2.1.3 except that a new version
 of `scikit-learn` (1.9.0), which fixed a bug in its weighted imputation
-algorithm, is used (see #534 for details).  Tax-Calculator version 6.7.1
+algorithm, is used (see #534 for details).  Tax-Calculator version 6.8.1
 or higher is required to generate the TMD files.
 
 When using version 2.1.4 to generate **sub-national weights**, there
 will be (presumably small) differences from the sub-national weights
-generated using earlier versions; however, the sub-national weights
-fingerprints have not yet been updated.
+generated using earlier versions.  Note that the 118th Congressional
+district weight fingerprints have not yet been updated.
 
 The earlier TMD 2.0.0 version introduced the following significant
 improvements:
@@ -75,3 +75,48 @@ values match state-level (or CD-level) totals from IRS Statistics of Income
 See [`tmd/areas/README.md`](tmd/areas/README.md) for how to build
 the weights, what files you get, and how to use them — with or
 without Tax-Calculator.
+
+### State weights
+
+Here is how to generate the state weights after executing `make data`
+to generate the national files.  **First**, generate the state weights
+by executing this command in the top-level folder of the repository:
+
+```
+make -C tmd/areas states WORKERS=8
+```
+
+changing the number of workers from 8 to 4 if spare computing power is
+needed while this command executes.  Report any test errors or other
+problems by opening a new issue.  **Second**, run the optional state
+fingerprint test by executing this command in the top-level folder of
+the repository:
+
+```
+pytest tests/test_fingerprint.py -v -k states
+```
+
+Report any test errors or other problems by opening a new issue.
+
+### 119th Congressional district weights
+
+Here is how to generate the 119th Congressional district weights after
+executing `make data` to generate the national files.  **First**,
+generate the state weights by executing this command in the top-level
+folder of the repository:
+
+```
+make -C tmd/areas cds-119 WORKERS=8
+```
+
+changing the number of workers from 8 to 4 if spare computing power is
+needed while this command executes.  Report any test errors or other
+problems by opening a new issue.  **Second**, run the optional district
+fingerprint test by executing this command in the top-level folder of
+the repository:
+
+```
+pytest tests/test_fingerprint.py -v -k cd_119
+```
+
+Report any test errors or other problems by opening a new issue.

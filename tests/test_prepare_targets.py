@@ -52,7 +52,8 @@ class TestSOIShares:
     """Test that SOI shares are computed correctly."""
 
     @pytest.fixture(scope="class")
-    def shares_data(self):
+    @classmethod
+    def shares_data(cls):
         """Load SOI data and compute shares for 2022."""
         soilong = create_soilong(SOI_RAW_DIR, years=[2022])
         pop_df = get_state_population(2022)
@@ -134,7 +135,8 @@ class TestTargetFileWriter:
     """Test recipe expansion produces correct target files."""
 
     @pytest.fixture(scope="class")
-    def mn_targets(self, tmp_path_factory):
+    @classmethod
+    def mn_targets(cls, tmp_path_factory):
         """Run the full pipeline for MN."""
         enhanced = prepare_area_targets(
             area_type=AreaType.STATE,
@@ -252,7 +254,8 @@ class TestCDShares:
     """Validate the pre-computed CD shares file."""
 
     @pytest.fixture(scope="class")
-    def cd_shares(self, congress):
+    @classmethod
+    def cd_shares(cls, congress):
         """Load the pre-computed CD shares CSV for the given Congress."""
         path = _PREPARE / "data" / f"cds_{congress}_shares.csv"
         if not path.exists():
@@ -302,7 +305,8 @@ class TestCDTargetFiles:
     """Validate CD target file structure (no solving)."""
 
     @pytest.fixture(scope="class")
-    def cd_target_dir(self, congress):
+    @classmethod
+    def cd_target_dir(cls, congress):
         """Path to CD target files for the given Congress."""
         path = REPO_ROOT / "tmd" / "areas" / "targets" / f"cds_{congress}"
         if not path.exists() or not list(path.glob("*_targets.csv")):
