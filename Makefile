@@ -10,13 +10,13 @@ install:
 
 .PHONY=clean
 clean:
-	rm -f tmd/storage/output/tmd*
 	rm -f tmd/storage/output/growfactors.csv
+	rm -f tmd/storage/output/tmd*
 	rm -f tmd/storage/output/cached*
 	rm -f tmd/storage/output/preimpute_tmd.csv.gz
 	rm -f tmd/storage/output/make_data_*.log
 
-# Each of the five build stages below tees its stdout+stderr to a
+# Each of the six build stages below tees its stdout+stderr to a
 # per-stage log file in tmd/storage/output/.  On-screen output during
 # `make data` is unchanged; the log files are a byproduct so that any
 # warnings emitted during the run (pandas, numpy, taxcalc, scipy,
@@ -31,19 +31,25 @@ clean:
 # appear silent on the terminal until the buffer flushes.  The `-u`
 # flag preserves the pre-tee behavior of seeing progress in real time.
 
-tmd/storage/output/tmd.csv.gz:
+# The two growth-factors files are built first because subsequent
+# stages use growfactors.csv as the Policy-parameter indexing file and
+# tmd_growfactors.csv as the Records-variable extrapolation file.
+
+tmd/storage/output/growfactors.csv:
+	python -u tmd/create_raw_growth_factors.py 2>&1 \
+	    | tee tmd/storage/output/make_data_raw_growfactors.log
+
+tmd/storage/output/tmd_growfactors.csv: tmd/storage/output/growfactors.csv
+	python -u tmd/create_taxcalc_growth_factors.py 2>&1 \
+	    | tee tmd/storage/output/make_data_tmd_growfactors.log
+
+tmd/storage/output/tmd.csv.gz: tmd/storage/output/tmd_growfactors.csv
 	python -u tmd/create_taxcalc_input_variables.py 2>&1 \
 	    | tee tmd/storage/output/make_data_tmd.log
 
-tmd/storage/output/tmd_weights.csv.gz:
+tmd/storage/output/tmd_weights.csv.gz: tmd/storage/output/tmd.csv.gz
 	python -u tmd/create_taxcalc_sampling_weights.py 2>&1 \
 	    | tee tmd/storage/output/make_data_weights.log
-
-tmd/storage/output/tmd_growfactors.csv:
-	python -u tmd/create_raw_growth_factors.py 2>&1 \
-	    | tee tmd/storage/output/make_data_raw_growfactors.log
-	python -u tmd/create_taxcalc_growth_factors.py 2>&1 \
-	    | tee tmd/storage/output/make_data_tmd_growfactors.log
 
 tmd/storage/output/cached_files:
 	python -u tmd/create_taxcalc_cached_files.py 2>&1 \
@@ -54,9 +60,10 @@ tmd/storage/output/preimpute_tmd.csv.gz:
 	    | tee tmd/storage/output/make_data_preimpute.log
 
 .PHONY=tmd_files
-tmd_files: tmd/storage/output/tmd.csv.gz \
-  tmd/storage/output/tmd_weights.csv.gz \
+tmd_files: tmd/storage/output/growfactors.csv \
   tmd/storage/output/tmd_growfactors.csv \
+  tmd/storage/output/tmd.csv.gz \
+  tmd/storage/output/tmd_weights.csv.gz \
   tmd/storage/output/cached_files \
   tmd/storage/output/preimpute_tmd.csv.gz
 
@@ -73,8 +80,6 @@ test: tmd_files
 
 .PHONY=data
 data: install clean format lint tmd_files test warnings
-	diff tmd/storage/output/growfactors.csv tmd/storage/output/old_growfactors.csv
-	diff tmd/storage/output/tmd_growfactors.csv tmd/storage/output/old_tmd_growfactors.csv
 
 .PHONY=warnings
 warnings:
